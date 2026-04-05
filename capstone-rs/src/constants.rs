@@ -230,6 +230,7 @@ define_cs_enum_wrapper!(
     => RISCV = CS_ARCH_RISCV;
     /// BPF
     => BPF = CS_ARCH_BPF;
+    => SBPF = CS_ARCH_SBPF;
 );
 
 define_cs_enum_wrapper!(
@@ -327,6 +328,7 @@ define_cs_enum_wrapper!(
     => Cbpf = { cs_mode::CS_MODE_BPF_CLASSIC };
     /// Extended BPF mode
     => Ebpf = { cs_mode::CS_MODE_BPF_EXTENDED };
+    => SbpfV0 = { cs_mode::CS_MODE_SBPF_V0 };
     /// TriCore 1.1
     => TriCore110 = { cs_mode::CS_MODE_TRICORE_110 };
     /// TriCore 1.2
