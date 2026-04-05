@@ -67,7 +67,7 @@ fn main() {
 ```
 
 Output:
-```
+```text
 Found 3 instructions
 0x0100: mov64 r1, 1
 0x0108: ldxw r0, [r10-0xc]
