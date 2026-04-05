@@ -2,15 +2,92 @@
 
 [![Crates.io Badge](https://img.shields.io/crates/v/capstone.svg)](https://crates.io/crates/capstone)
 
+> **Fork of [capstone-rust/capstone-rs](https://github.com/capstone-rust/capstone-rs) with added Solana sBPF disassembly support.**
+
+---
+
+## Solana sBPF Support
+
+This fork extends the upstream capstone-rs bindings with support for **Solana sBPF** (Solana Berkeley Packet Filter), the custom bytecode format used by Solana on-chain programs.
+
+### What is Solana sBPF?
+
+Solana programs are compiled to sBPF, a custom variant of eBPF with Solana-specific instruction semantics (different calling conventions, register layout, and syscall ABI). This fork bundles a capstone C library patched with sBPF architecture support and exposes a full Rust API.
+
+### Supported features
+
+| Feature | Description |
+|---|---|
+| Registers | `r0`–`r10` (11 registers) |
+| ALU instructions | `add32/64`, `sub32/64`, `mul32/64`, `div32/64`, `or`, `and`, `lsh`, `rsh`, `arsh`, `neg`, `mod`, `xor`, `mov` |
+| Load/Store | `lddw`, `ldxb/h/w/dw`, `stb/h/w/dw`, `stxb/h/w/dw` |
+| Byte-swap | `le16/32/64`, `be16/32/64` |
+| Branches | `ja`, `jeq`, `jgt`, `jge`, `jset`, `jne`, `jsgt`, `jsge`, `jlt`, `jle`, `jslt`, `jsle` |
+| Control flow | `call`, `exit` |
+| Operand access info | signed/unsigned flag, read/write access type |
+
+### Quick start
+
+Add to `Cargo.toml`:
+
+```toml
+[dependencies]
+capstone = { git = "https://github.com/cpkt9762/capstone-rs", features = ["arch_sbpf"] }
+```
+
+### Usage example
+
+```rust
+use capstone::prelude::*;
+use capstone::arch::sbpf;
+
+// sBPF bytecode: mov64 r1, 1; ldxw r0, [r10-12]; exit
+const SBPF_CODE: &[u8] = &[
+    0xb7, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,  // mov64 r1, 1
+    0x61, 0xa0, 0xf4, 0xff, 0x00, 0x00, 0x00, 0x00,  // ldxw  r0, [r10-12]
+    0x95, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // exit
+];
+
+fn main() {
+    let cs = Capstone::new()
+        .sbpf()
+        .mode(sbpf::ArchMode::SbpfV0)
+        .detail(true)
+        .build()
+        .expect("Failed to create Capstone object");
+
+    let insns = cs.disasm_all(SBPF_CODE, 0x100)
+        .expect("Failed to disassemble");
+
+    println!("Found {} instructions", insns.len());
+    for insn in insns.as_ref() {
+        println!("0x{:04x}: {} {}", insn.address(), insn.mnemonic().unwrap_or(""), insn.op_str().unwrap_or(""));
+    }
+}
+```
+
+Output:
+```
+Found 3 instructions
+0x0100: mov64 r1, 1
+0x0108: ldxw r0, [r10-0xc]
+0x0110: exit
+```
+
+### Feature flags
+
+| Flag | Description |
+|---|---|
+| `arch_sbpf` | Enable Solana sBPF disassembly support |
+| `support_all_archs` | Enable all architectures including sBPF (default) |
+
+---
+
+## Original capstone-rs
+
 Linux/macOS/Windows [![Github Workflow CI Badge](https://github.com/capstone-rust/capstone-rs/actions/workflows/main.yml/badge.svg)](https://github.com/capstone-rust/capstone-rs/actions)
 |
 FreeBSD [![Cirrus CI Badge](https://api.cirrus-ci.com/github/capstone-rust/capstone-rs.svg)](https://cirrus-ci.com/github/capstone-rust/capstone-rs)
-
-[![codecov](https://codecov.io/gh/capstone-rust/capstone-rs/branch/master/graph/badge.svg)](https://codecov.io/gh/capstone-rust/capstone-rs)
-
-
- **[API Documentation](https://docs.rs/capstone/)**
-
 
 Bindings to the [capstone library][upstream] disassembly framework.
 
@@ -33,18 +110,6 @@ use capstone::prelude::*;
 
 const X86_CODE: &'static [u8] = b"\x55\x48\x8b\x05\xb8\x13\x00\x00\xe9\x14\x9e\x08\x00\x45\x31\xe4";
 
-/// Print register names
-fn reg_names(cs: &Capstone, regs: &[RegId]) -> String {
-    let names: Vec<String> = regs.iter().map(|&x| cs.reg_name(x).unwrap()).collect();
-    names.join(", ")
-}
-
-/// Print instruction group names
-fn group_names(cs: &Capstone, regs: &[InsnGroupId]) -> String {
-    let names: Vec<String> = regs.iter().map(|&x| cs.group_name(x).unwrap()).collect();
-    names.join(", ")
-}
-
 fn main() {
     let cs = Capstone::new()
         .x86()
@@ -60,59 +125,13 @@ fn main() {
     for i in insns.as_ref() {
         println!();
         println!("{}", i);
-
         let detail: InsnDetail = cs.insn_detail(&i).expect("Failed to get insn detail");
         let arch_detail: ArchDetail = detail.arch_detail();
         let ops = arch_detail.operands();
-
-        let output: &[(&str, String)] = &[
-            ("insn id:", format!("{:?}", i.id().0)),
-            ("bytes:", format!("{:?}", i.bytes())),
-            ("read regs:", reg_names(&cs, detail.regs_read())),
-            ("write regs:", reg_names(&cs, detail.regs_write())),
-            ("insn groups:", group_names(&cs, detail.groups())),
-        ];
-
-        for &(ref name, ref message) in output.iter() {
-            println!("{:4}{:12} {}", "", name, message);
-        }
-
-        println!("{:4}operands: {}", "", ops.len());
-        for op in ops {
-            println!("{:8}{:?}", "", op);
-        }
+        println!("  operands: {}", ops.len());
     }
 }
 ```
-
-Produces:
-
-```plain
-Found 4 instructions
-
-0x1000: pushq %rbp
-    read regs:   rsp
-    write regs:  rsp
-    insn groups: mode64
-
-0x1001: movq 0x13b8(%rip), %rax
-    read regs:
-    write regs:
-    insn groups:
-
-0x1008: jmp 0x8ae21
-    read regs:
-    write regs:
-    insn groups: jump
-
-0x100d: xorl %r12d, %r12d
-    read regs:
-    write regs:  rflags
-    insn groups:
-```
-
-To see more demos, see the [`examples/`](capstone-rs/examples) directory.
-More complex demos welcome!
 
 # Features
 
@@ -124,26 +143,18 @@ More complex demos welcome!
   instead of using pre-generated bindings (not recommended)
 - `arch_$ARCH`<sup>&dagger;</sup>: enable arch `$ARCH` support in capstone,
   e.g. `arch_arm64` enables arch arm64 support
+- `arch_sbpf`<sup>&dagger;</sup>: enable **Solana sBPF** support *(added in this fork)*
 - `support_all_archs`<sup>&dagger;</sup>: enable all archs available
-  in capstone, imply all `arch_$ARCH` features
+  in capstone, imply all `arch_$ARCH` features (includes `arch_sbpf`)
 - `check_only`: do not compile and link capstone C library,
   you can enable it to speed up `cargo check` by 5x
 
 <sup>&dagger;</sup>: enabled by default
 
-# Reporting Issues
+# Upstream
 
-Please open a [Github issue](https://github.com/capstone-rust/capstone-rs/issues)
-
-# Author
-
-- Library Author: Nguyen Anh Quynh
-- Binding Author(s):
-    - m4b <m4b.github.io@gmail.com>
-    - Richo Healey <richo@psych0tik.net>
-    - Travis Finkenauer <tmfinken@gmail.com>
-
-You may find a [full list of contributors on Github](https://github.com/capstone-rust/capstone-rs/graphs/contributors).
+This fork is based on [capstone-rust/capstone-rs](https://github.com/capstone-rust/capstone-rs).
+Issues unrelated to Solana sBPF should be reported upstream.
 
 # License
 
