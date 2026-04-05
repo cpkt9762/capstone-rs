@@ -149,6 +149,7 @@ typedef enum cs_arch {
 	CS_ARCH_RISCV,          ///< RISCV architecture
 	CS_ARCH_SH,             ///< SH architecture
 	CS_ARCH_TRICORE,	///< TriCore architecture
+	CS_ARCH_SBPF,
 	CS_ARCH_MAX,
 	CS_ARCH_ALL = 0xFFFF, // All architectures - for cs_support()
 } cs_arch;
@@ -204,6 +205,7 @@ typedef enum cs_mode {
 	CS_MODE_M680X_HCS08 = 1 << 10, ///< M680X Freescale/NXP HCS08 mode
 	CS_MODE_BPF_CLASSIC = 0,	///< Classic BPF mode (default)
 	CS_MODE_BPF_EXTENDED = 1 << 0,	///< Extended BPF mode
+	CS_MODE_SBPF_V0 = 0,
 	CS_MODE_RISCV32  = 1 << 0,        ///< RISCV RV32G
 	CS_MODE_RISCV64  = 1 << 1,        ///< RISCV RV64G
 	CS_MODE_RISCVC   = 1 << 2,        ///< RISCV compressed instructure mode
@@ -381,6 +383,7 @@ typedef struct cs_opt_skipdata {
 #include "wasm.h"
 #include "mos65xx.h"
 #include "bpf.h"
+#include "sbpf.h"
 #include "sh.h"
 #include "tricore.h"
 
@@ -424,6 +427,7 @@ typedef struct cs_detail {
 		cs_mos65xx mos65xx;	///< MOS65XX architecture (including MOS6502)
 		cs_wasm wasm;	///< Web Assembly architecture
 		cs_bpf bpf;	///< Berkeley Packet Filter architecture (including eBPF)
+		cs_sbpf sbpf;
 		cs_riscv riscv; ///< RISCV architecture
 		cs_sh sh;        ///< SH architecture
 		cs_tricore tricore; ///< TriCore architecture

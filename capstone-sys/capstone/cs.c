@@ -68,6 +68,7 @@
 #include "arch/RISCV/RISCVModule.h"
 #include "arch/MOS65XX/MOS65XXModule.h"
 #include "arch/BPF/BPFModule.h"
+#include "arch/SBPF/SBPFModule.h"
 #include "arch/SH/SHModule.h"
 #include "arch/TriCore/TriCoreModule.h"
 
@@ -255,6 +256,15 @@ static const struct {
 #else
 	{ NULL, NULL, 0 },
 #endif
+#ifdef CAPSTONE_HAS_SBPF
+	{
+		SBPF_global_init,
+		SBPF_option,
+		~(CS_MODE_LITTLE_ENDIAN | CS_MODE_SBPF_V0),
+	},
+#else
+	{ NULL, NULL, 0 },
+#endif
 };
 
 // bitmask of enabled architectures
@@ -312,6 +322,9 @@ static const uint32_t all_arch = 0
 #endif
 #ifdef CAPSTONE_HAS_TRICORE
 	| (1 << CS_ARCH_TRICORE)
+#endif
+#ifdef CAPSTONE_HAS_SBPF
+	| (1 << CS_ARCH_SBPF)
 #endif
 ;
 
@@ -386,7 +399,8 @@ bool CAPSTONE_API cs_support(int query)
 				    (1 << CS_ARCH_M680X) | (1 << CS_ARCH_EVM)        |
 				    (1 << CS_ARCH_RISCV) | (1 << CS_ARCH_MOS65XX)    |
 				    (1 << CS_ARCH_WASM)  | (1 << CS_ARCH_BPF)        |
-				    (1 << CS_ARCH_SH)    | (1 << CS_ARCH_TRICORE));
+				    (1 << CS_ARCH_SH)    | (1 << CS_ARCH_TRICORE)   |
+				    (1 << CS_ARCH_SBPF));
 
 	if ((unsigned int)query < CS_ARCH_MAX)
 		return all_arch & (1 << query);
@@ -683,6 +697,8 @@ static uint8_t skipdata_size(cs_struct *handle)
 			return 1;
 		case CS_ARCH_BPF:
 			// both classic and extended BPF have alignment 8.
+			return 8;
+		case CS_ARCH_SBPF:
 			return 8;
 		case CS_ARCH_RISCV:
 			// special compress mode
@@ -1425,6 +1441,11 @@ int CAPSTONE_API cs_op_count(csh ud, const cs_insn *insn, unsigned int op_type)
 				if (insn->detail->bpf.operands[i].type == (bpf_op_type)op_type)
 					count++;
 			break;
+		case CS_ARCH_SBPF:
+			for (i = 0; i < insn->detail->sbpf.op_count; i++)
+				if (insn->detail->sbpf.operands[i].type == (sbpf_op_type)op_type)
+					count++;
+			break;
 		case CS_ARCH_RISCV:
 			for (i = 0; i < insn->detail->riscv.op_count; i++)
 				if (insn->detail->riscv.operands[i].type == (riscv_op_type)op_type)
@@ -1597,6 +1618,14 @@ int CAPSTONE_API cs_op_index(csh ud, const cs_insn *insn, unsigned int op_type,
 		case CS_ARCH_BPF:
 			for (i = 0; i < insn->detail->bpf.op_count; i++) {
 				if (insn->detail->bpf.operands[i].type == (bpf_op_type)op_type)
+					count++;
+				if (count == post)
+					return i;
+			}
+			break;
+		case CS_ARCH_SBPF:
+			for (i = 0; i < insn->detail->sbpf.op_count; i++) {
+				if (insn->detail->sbpf.operands[i].type == (sbpf_op_type)op_type)
 					count++;
 				if (count == post)
 					return i;
