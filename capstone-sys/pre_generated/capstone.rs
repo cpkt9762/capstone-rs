@@ -42,7 +42,9 @@ pub enum cs_arch {
     CS_ARCH_SH = 16,
     #[doc = "< TriCore architecture"]
     CS_ARCH_TRICORE = 17,
-    CS_ARCH_MAX = 18,
+    #[doc = "< Solana BPF architecture"]
+    CS_ARCH_SBPF = 18,
+    CS_ARCH_MAX = 19,
     CS_ARCH_ALL = 65535,
 }
 impl cs_mode {
@@ -196,6 +198,10 @@ impl cs_mode {
 impl cs_mode {
     #[doc = "< Extended BPF mode"]
     pub const CS_MODE_BPF_EXTENDED: cs_mode = cs_mode(1);
+}
+impl cs_mode {
+    #[doc = "< Solana BPF v0 mode (default)"]
+    pub const CS_MODE_SBPF_V0: cs_mode = cs_mode(0);
 }
 impl cs_mode {
     #[doc = "< RISCV RV32G"]
@@ -16489,6 +16495,165 @@ pub mod bpf_insn_group {
     pub const BPF_GRP_MISC: Type = 7;
     pub const BPF_GRP_ENDING: Type = 8;
 }
+#[repr(u32)]
+#[doc = " Operand type for instruction's operands"]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum sbpf_op_type {
+    SBPF_OP_INVALID = 0,
+    SBPF_OP_REG = 1,
+    SBPF_OP_IMM = 2,
+    SBPF_OP_OFF = 16,
+    SBPF_OP_MEM = 128,
+}
+pub mod sbpf_reg {
+    #[doc = " SBPF registers"]
+    pub type Type = ::core::ffi::c_uint;
+    pub const SBPF_REG_INVALID: Type = 0;
+    pub const SBPF_REG_R0: Type = 1;
+    pub const SBPF_REG_R1: Type = 2;
+    pub const SBPF_REG_R2: Type = 3;
+    pub const SBPF_REG_R3: Type = 4;
+    pub const SBPF_REG_R4: Type = 5;
+    pub const SBPF_REG_R5: Type = 6;
+    pub const SBPF_REG_R6: Type = 7;
+    pub const SBPF_REG_R7: Type = 8;
+    pub const SBPF_REG_R8: Type = 9;
+    pub const SBPF_REG_R9: Type = 10;
+    pub const SBPF_REG_R10: Type = 11;
+    pub const SBPF_REG_ENDING: Type = 12;
+}
+#[doc = " Instruction's operand referring to memory\n This is associated with SBPF_OP_MEM operand type above"]
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct sbpf_op_mem {
+    pub base: sbpf_reg::Type,
+    pub disp: i32,
+}
+#[doc = " Instruction operand"]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct cs_sbpf_op {
+    pub type_: sbpf_op_type,
+    pub __bindgen_anon_1: cs_sbpf_op__bindgen_ty_1,
+    pub is_signed: bool,
+    pub access: u8,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union cs_sbpf_op__bindgen_ty_1 {
+    pub reg: u8,
+    pub imm: i64,
+    pub off: i32,
+    pub mem: sbpf_op_mem,
+}
+impl ::core::fmt::Debug for cs_sbpf_op__bindgen_ty_1 {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        write!(f, "cs_sbpf_op__bindgen_ty_1 {{ union }}")
+    }
+}
+impl ::core::fmt::Debug for cs_sbpf_op {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        write!(
+            f,
+            "cs_sbpf_op {{ type: {:?}, __bindgen_anon_1: {:?}, is_signed: {:?}, access: {:?} }}",
+            self.type_, self.__bindgen_anon_1, self.is_signed, self.access
+        )
+    }
+}
+#[doc = " Instruction structure"]
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct cs_sbpf {
+    pub op_count: u8,
+    pub operands: [cs_sbpf_op; 4usize],
+}
+impl ::core::fmt::Debug for cs_sbpf {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        write!(
+            f,
+            "cs_sbpf {{ op_count: {:?}, operands: {:?} }}",
+            self.op_count, self.operands
+        )
+    }
+}
+#[repr(u32)]
+#[doc = " SBPF instruction"]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum sbpf_insn {
+    SBPF_INS_INVALID = 0,
+    SBPF_INS_ADD32 = 1,
+    SBPF_INS_SUB32 = 2,
+    SBPF_INS_MUL32 = 3,
+    SBPF_INS_DIV32 = 4,
+    SBPF_INS_OR32 = 5,
+    SBPF_INS_AND32 = 6,
+    SBPF_INS_LSH32 = 7,
+    SBPF_INS_RSH32 = 8,
+    SBPF_INS_NEG32 = 9,
+    SBPF_INS_MOD32 = 10,
+    SBPF_INS_XOR32 = 11,
+    SBPF_INS_MOV32 = 12,
+    SBPF_INS_ARSH32 = 13,
+    SBPF_INS_ADD64 = 14,
+    SBPF_INS_SUB64 = 15,
+    SBPF_INS_MUL64 = 16,
+    SBPF_INS_DIV64 = 17,
+    SBPF_INS_OR64 = 18,
+    SBPF_INS_AND64 = 19,
+    SBPF_INS_LSH64 = 20,
+    SBPF_INS_RSH64 = 21,
+    SBPF_INS_NEG64 = 22,
+    SBPF_INS_MOD64 = 23,
+    SBPF_INS_XOR64 = 24,
+    SBPF_INS_MOV64 = 25,
+    SBPF_INS_ARSH64 = 26,
+    SBPF_INS_LE16 = 27,
+    SBPF_INS_LE32 = 28,
+    SBPF_INS_LE64 = 29,
+    SBPF_INS_BE16 = 30,
+    SBPF_INS_BE32 = 31,
+    SBPF_INS_BE64 = 32,
+    SBPF_INS_LDDW = 33,
+    SBPF_INS_LDXB = 34,
+    SBPF_INS_LDXH = 35,
+    SBPF_INS_LDXW = 36,
+    SBPF_INS_LDXDW = 37,
+    SBPF_INS_STB = 38,
+    SBPF_INS_STH = 39,
+    SBPF_INS_STW = 40,
+    SBPF_INS_STDW = 41,
+    SBPF_INS_STXB = 42,
+    SBPF_INS_STXH = 43,
+    SBPF_INS_STXW = 44,
+    SBPF_INS_STXDW = 45,
+    SBPF_INS_JA = 46,
+    SBPF_INS_JEQ = 47,
+    SBPF_INS_JGT = 48,
+    SBPF_INS_JGE = 49,
+    SBPF_INS_JSET = 50,
+    SBPF_INS_JNE = 51,
+    SBPF_INS_JSGT = 52,
+    SBPF_INS_JSGE = 53,
+    SBPF_INS_JLT = 54,
+    SBPF_INS_JLE = 55,
+    SBPF_INS_JSLT = 56,
+    SBPF_INS_JSLE = 57,
+    SBPF_INS_CALL = 58,
+    SBPF_INS_EXIT = 59,
+    SBPF_INS_ENDING = 60,
+}
+pub mod sbpf_insn_group {
+    #[doc = " Group of SBPF instructions"]
+    pub type Type = ::core::ffi::c_uint;
+    pub const SBPF_GRP_INVALID: Type = 0;
+    pub const SBPF_GRP_LOAD: Type = 1;
+    pub const SBPF_GRP_STORE: Type = 2;
+    pub const SBPF_GRP_ALU: Type = 3;
+    pub const SBPF_GRP_JUMP: Type = 4;
+    pub const SBPF_GRP_CALL: Type = 5;
+    pub const SBPF_GRP_RETURN: Type = 6;
+    pub const SBPF_GRP_ENDING: Type = 7;
+}
 pub mod sh_reg {
     #[doc = " SH registers and special registers"]
     pub type Type = ::core::ffi::c_uint;
@@ -17598,6 +17763,8 @@ pub union cs_detail__bindgen_ty_1 {
     pub wasm: cs_wasm,
     #[doc = "< Berkeley Packet Filter architecture (including eBPF)"]
     pub bpf: cs_bpf,
+    #[doc = "< Solana BPF architecture"]
+    pub sbpf: cs_sbpf,
     #[doc = "< RISCV architecture"]
     pub riscv: cs_riscv,
     #[doc = "< SH architecture"]
