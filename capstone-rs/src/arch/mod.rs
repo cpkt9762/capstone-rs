@@ -415,6 +415,15 @@ macro_rules! arch_info_base {
                 ( syntax: )
                 ( both_endian: true  )
             ]
+            [
+                ( sbpf, SBPF, "arch_sbpf" )
+                ( mode:
+                    SbpfV0,
+                )
+                ( extra_modes: )
+                ( syntax: )
+                ( both_endian: false )
+            ]
         );
     };
 }
@@ -640,6 +649,14 @@ macro_rules! detail_arch_base {
                 feature = "arch_bpf",
                 /// Returns the BPF details, if any
                 => arch_name = bpf,
+            ]
+            [
+                detail = SbpfDetail,
+                insn_detail = SbpfInsnDetail<'a>,
+                op = SbpfOperand,
+                feature = "arch_sbpf",
+                #[allow(missing_docs)]
+                => arch_name = sbpf,
             ]
             [
                 detail = SysZDetail,

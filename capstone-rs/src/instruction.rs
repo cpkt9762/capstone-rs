@@ -501,6 +501,7 @@ impl InsnDetail<'_> {
             [ARM, ArmDetail, ArmInsnDetail, arm, "arch_arm"]
             [ARM64, Arm64Detail, Arm64InsnDetail, arm64, "arch_arm64"]
             [BPF, BpfDetail, BpfInsnDetail, bpf, "arch_bpf"]
+            [SBPF, SbpfDetail, SbpfInsnDetail, sbpf, "arch_sbpf"]
             [EVM, EvmDetail, EvmInsnDetail, evm, "arch_evm"]
             [M680X, M680xDetail, M680xInsnDetail, m680x, "arch_m680x"]
             [M68K, M68kDetail, M68kInsnDetail, m68k, "arch_m68k"]
