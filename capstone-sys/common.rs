@@ -91,8 +91,12 @@ pub static ARCH_INCLUDES: &[CapstoneArchInfo<'static>] = &[
     },
     CapstoneArchInfo {
         header_name: "bpf.h",
-        cs_name: "bpf"
-    }
+        cs_name: "bpf",
+    },
+    CapstoneArchInfo {
+        header_name: "sbpf.h",
+        cs_name: "sbpf",
+    },
 ];
 
 pub static BINDINGS_FILE: &str = "capstone.rs";
