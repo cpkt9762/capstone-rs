@@ -26,11 +26,15 @@ const CBPF_CODE: &[u8] = b"\x94\x09\x00\x00\x37\x13\x03\x00\
                           \x16\x00\x00\x00\x00\x00\x00\x00\
                           \x80\x00\x00\x00\x00\x00\x00\x00";
 const EBPF_CODE: &[u8] = b"\x97\x09\x00\x00\x37\x13\x03\x00\
-                        \xdc\x02\x00\x00\x20\x00\x00\x00\
-                        \x30\x00\x00\x00\x00\x00\x00\x00\
-                        \xdb\x3a\x00\x01\x00\x00\x00\x00\
-                        \x84\x02\x00\x00\x00\x00\x00\x00\
-                        \x6d\x33\x17\x02\x00\x00\x00\x00";
+                         \xdc\x02\x00\x00\x20\x00\x00\x00\
+                         \x30\x00\x00\x00\x00\x00\x00\x00\
+                         \xdb\x3a\x00\x01\x00\x00\x00\x00\
+                         \x84\x02\x00\x00\x00\x00\x00\x00\
+                         \x6d\x33\x17\x02\x00\x00\x00\x00";
+const SBPF_CODE: &[u8] = b"\xb7\x01\x00\x00\x01\x00\x00\x00\
+                         \x61\xa0\xf4\xff\x00\x00\x00\x00\
+                         \x63\x1a\xf4\xff\x00\x00\x00\x00\
+                         \x95\x00\x00\x00\x00\x00\x00\x00";
 
 // Aliases for group types
 const JUMP: cs_group_type::Type = cs_group_type::CS_GRP_JUMP;
@@ -905,6 +909,7 @@ fn test_capstone_supports_arch() {
         Arch::SPARC,
         Arch::SYSZ,
         Arch::XCORE,
+        Arch::SBPF,
         // Arch::M68K,
     ];
 
@@ -1785,6 +1790,80 @@ fn test_arch_bpf_detail() {
                 b"\x16\x00\x00\x00\x00\x00\x00\x00",
                 &[Reg(RegId(BPF_REG_A as RegIdInt))],
             ),
+        ],
+    );
+}
+
+#[cfg(feature = "arch_sbpf")]
+#[test]
+fn test_arch_sbpf_simple() {
+    let cs = Capstone::new()
+        .sbpf()
+        .mode(sbpf::ArchMode::SbpfV0)
+        .detail(true)
+        .build()
+        .unwrap();
+    let insns = cs.disasm_all(SBPF_CODE, START_TEST_ADDR).unwrap();
+    let insns: Vec<_> = insns.iter().collect();
+
+    assert_eq!(insns.len(), 4);
+    #[cfg(feature = "full")]
+    {
+        assert_eq!(insns[0].mnemonic().unwrap(), "mov64");
+        assert_eq!(insns[1].mnemonic().unwrap(), "ldxw");
+        assert_eq!(insns[2].mnemonic().unwrap(), "stxw");
+        assert_eq!(insns[3].mnemonic().unwrap(), "exit");
+    }
+}
+
+#[cfg(feature = "arch_sbpf")]
+#[test]
+fn test_arch_sbpf_detail() {
+    use crate::arch::sbpf::SbpfOperand::*;
+    use crate::arch::sbpf::SbpfReg::*;
+    use crate::arch::sbpf::*;
+    use capstone_sys::*;
+
+    test_arch_mode_endian_insns_detail(
+        &mut Capstone::new()
+            .sbpf()
+            .mode(sbpf::ArchMode::SbpfV0)
+            .detail(true)
+            .build()
+            .unwrap(),
+        Arch::SBPF,
+        Mode::SbpfV0,
+        None,
+        &[],
+        &[
+            DII::new(
+                "mov64",
+                b"\xb7\x01\x00\x00\x01\x00\x00\x00",
+                &[Reg(RegId(SBPF_REG_R1 as RegIdInt)), Imm(1)],
+            ),
+            DII::new(
+                "ldxw",
+                b"\x61\xa0\xf4\xff\x00\x00\x00\x00",
+                &[
+                    Reg(RegId(SBPF_REG_R0 as RegIdInt)),
+                    Mem(SbpfOpMem(sbpf_op_mem {
+                        base: SBPF_REG_R10,
+                        disp: -12,
+                    })),
+                ],
+            ),
+            DII::new(
+                "stxw",
+                b"\x63\x1a\xf4\xff\x00\x00\x00\x00",
+                &[
+                    Mem(SbpfOpMem(sbpf_op_mem {
+                        base: SBPF_REG_R10,
+                        disp: -12,
+                    })),
+                    Reg(RegId(SBPF_REG_R1 as RegIdInt)),
+                ],
+            ),
+            DII::new("exit", b"\x95\x00\x00\x00\x00\x00\x00\x00", &[]),
         ],
     );
 }
